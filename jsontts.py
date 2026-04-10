@@ -14,6 +14,7 @@ def process_json_to_chapters(
     prompt_text: str = None,
     start_chapter: str = None,
     end_chapter: str = None,
+    model_id: str = "k2-fsa/OmniVoice",
     device_map: str = "auto",
     num_step: int = 32,
     guidance_scale: float = 2.0,
@@ -28,13 +29,14 @@ def process_json_to_chapters(
         prompt_text: Transcription of reference audio. If None, Whisper ASR will auto-transcribe.
         start_chapter: Starting chapter ID (e.g., "0001"), None = from start
         end_chapter: Ending chapter ID (e.g., "0005"), None = to end
+        model_id: OmniVoice model ID from HuggingFace
         device_map: Device mapping ("auto", "cpu", or specific GPU)
         num_step: Number of generation steps (32 for quality, 16 for speed)
         guidance_scale: Classifier-free guidance scale
     """
     # Load model once
-    logging.info("Loading OmniVoice model...")
-    model = load_model(device_map=device_map)
+    logging.info(f"Loading OmniVoice model: {model_id}...")
+    model = load_model(model_id=model_id, device_map=device_map)
     logging.info("Model loaded successfully!")
     
     # Load JSON
@@ -92,8 +94,9 @@ def process_json_to_chapters(
                 save_path=str(temp_file),
                 text=segment['text'],
                 ref_audio=prompt_wav,
-                ref_text=prompt_text,
                 model=model,
+                model_id=model_id,
+                ref_text=prompt_text,
                 num_step=num_step,
                 guidance_scale=guidance_scale,
             )

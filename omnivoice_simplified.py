@@ -7,21 +7,22 @@ from pathlib import Path
 from omnivoice import OmniVoice
 
 
-def load_model(device_map: str = "auto", dtype=torch.float16):
+def load_model(model_id: str = "k2-fsa/OmniVoice", device_map: str = "auto", dtype=torch.float16):
     """
     Load OmniVoice model
     
     Args:
+        model_id: Model ID from HuggingFace (default: "k2-fsa/OmniVoice")
         device_map: Device mapping ("auto", "cpu", or specific GPU)
         dtype: Data type (torch.float16 or torch.float32)
     
     Returns:
         model: OmniVoice model instance
     """
-    logging.info(f"Loading OmniVoice model from pretrained (device_map={device_map})...")
+    logging.info(f"Loading OmniVoice model: {model_id} (device_map={device_map})...")
     
     model = OmniVoice.from_pretrained(
-        "k2-fsa/OmniVoice",
+        model_id,
         device_map=device_map,
         dtype=dtype
     )
@@ -36,8 +37,9 @@ def generate_sentence(
     save_path: str,
     text: str,
     ref_audio: str,
-    ref_text: str = None,
     model: OmniVoice = None,
+    model_id: str = "k2-fsa/OmniVoice",
+    ref_text: str = None,
     num_step: int = 32,
     guidance_scale: float = 2.0,
     speed: float = 1.0,
@@ -60,8 +62,9 @@ def generate_sentence(
         save_path: Output file path for audio
         text: Text to synthesize
         ref_audio: Path to reference audio file
-        ref_text: Transcription of reference audio. If None, Whisper ASR will auto-transcribe
         model: OmniVoice model instance
+        model_id: Model ID from HuggingFace (used if model is None)
+        ref_text: Transcription of reference audio. If None, Whisper ASR will auto-transcribe
         num_step: Number of iterative unmasking steps (default 32, use 16 for faster inference)
         guidance_scale: Classifier-free guidance scale (default 2.0)
         speed: Speed factor (>1.0 = faster, <1.0 = slower). Ignored if duration is set.

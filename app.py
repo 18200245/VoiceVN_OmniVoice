@@ -43,6 +43,7 @@ def load_config():
                 "default": {
                     "name": "Default Profile",
                     "description": "Basic Vietnamese TTS with OmniVoice",
+                    "model_id": "k2-fsa/OmniVoice",
                     "device_map": "auto",
                     "dtype": "float16",
                     "prompt_wav": "/content/1128.MP3",
@@ -421,6 +422,7 @@ def get_profile_info(profile_name):
     return (
         profile.get("name", ""),
         profile.get("description", ""),
+        profile.get("model_id", "k2-fsa/OmniVoice"),
         profile.get("device_map", "auto"),
         profile.get("dtype", "float16"),
         profile.get("prompt_wav", ""),
@@ -445,6 +447,7 @@ def switch_profile(profile_name):
             f"✓ Switched to profile: {profile['name']}",
             profile.get("name", ""),
             profile.get("description", ""),
+            profile.get("model_id", "k2-fsa/OmniVoice"),
             profile.get("device_map", "auto"),
             profile.get("dtype", "float16"),
             profile.get("prompt_wav", ""),
@@ -454,15 +457,16 @@ def switch_profile(profile_name):
             profile.get("default_guidance_scale", 2.0),
             profile.get("default_speed", 1.0)
         )
-    return "✗ Profile not found!", "", "", "auto", "float16", "", "", "", 32, 2.0, 1.0
+    return "✗ Profile not found!", "", "", "k2-fsa/OmniVoice", "auto", "float16", "", "", "", 32, 2.0, 1.0
 
 
-def update_current_profile(name, description, device_map, dtype, prompt_wav, 
+def update_current_profile(name, description, model_id, device_map, dtype, prompt_wav, 
                           prompt_text, output_dir, num_step, guidance_scale, speed):
     """Update current profile"""
     config_data["profiles"][current_profile].update({
         "name": name,
         "description": description,
+        "model_id": model_id,
         "device_map": device_map,
         "dtype": dtype,
         "prompt_wav": prompt_wav,
@@ -476,7 +480,7 @@ def update_current_profile(name, description, device_map, dtype, prompt_wav,
     return f"✓ Profile '{current_profile}' updated successfully!"
 
 
-def create_new_profile(profile_id, name, description, device_map, dtype, prompt_wav, 
+def create_new_profile(profile_id, name, description, model_id, device_map, dtype, prompt_wav, 
                        prompt_text, output_dir, num_step, guidance_scale, speed):
     """Create a new profile"""
     if not profile_id:
@@ -488,6 +492,7 @@ def create_new_profile(profile_id, name, description, device_map, dtype, prompt_
     config_data["profiles"][profile_id] = {
         "name": name or profile_id,
         "description": description or "",
+        "model_id": model_id or "k2-fsa/OmniVoice",
         "device_map": device_map,
         "dtype": dtype,
         "prompt_wav": prompt_wav,
@@ -533,15 +538,16 @@ def load_model_func():
             return "⚠ Model already loaded!"
         
         config = get_current_config()
+        model_id = config.get("model_id", "k2-fsa/OmniVoice")
         device_map = config.get("device_map", "auto")
         dtype_str = config.get("dtype", "float16")
         dtype = torch.float16 if dtype_str == "float16" else torch.float32
         
-        logging.info(f"Loading OmniVoice model (device_map={device_map}, dtype={dtype_str})...")
+        logging.info(f"Loading OmniVoice model: {model_id} (device_map={device_map}, dtype={dtype_str})...")
         
-        model = load_model(device_map=device_map, dtype=dtype)
+        model = load_model(model_id=model_id, device_map=device_map, dtype=dtype)
         
-        return f"✓ OmniVoice model loaded successfully using profile '{current_profile}'!"
+        return f"✓ OmniVoice model loaded successfully!\nModel: {model_id}\nProfile: '{current_profile}'"
     except Exception as e:
         return f"✗ Error loading model: {str(e)}"
 
@@ -575,8 +581,9 @@ def generate_single_audio(text, num_step, guidance_scale, speed):
             save_path=str(output_file),
             text=text,
             ref_audio=config["prompt_wav"],
-            ref_text=config.get("prompt_text"),
             model=model,
+            model_id=config.get("model_id", "k2-fsa/OmniVoice"),
+            ref_text=config.get("prompt_text"),
             num_step=num_step,
             guidance_scale=guidance_scale,
             speed=speed,
@@ -697,8 +704,9 @@ def process_project_chapters(start_chapter, end_chapter, regenerate, enable_srt,
                                 save_path=str(temp_file),
                                 text=chunk_text,
                                 ref_audio=config["prompt_wav"],
-                                ref_text=config.get("prompt_text"),
                                 model=model,
+                                model_id=config.get("model_id", "k2-fsa/OmniVoice"),
+                                ref_text=config.get("prompt_text"),
                                 num_step=config["default_num_step"],
                                 guidance_scale=config["default_guidance_scale"],
                                 speed=config["default_speed"],
@@ -736,8 +744,9 @@ def process_project_chapters(start_chapter, end_chapter, regenerate, enable_srt,
                             save_path=str(temp_file),
                             text=segment['text'],
                             ref_audio=config["prompt_wav"],
-                            ref_text=config.get("prompt_text"),
                             model=model,
+                            model_id=config.get("model_id", "k2-fsa/OmniVoice"),
+                            ref_text=config.get("prompt_text"),
                             num_step=config["default_num_step"],
                             guidance_scale=config["default_guidance_scale"],
                             speed=config["default_speed"],
@@ -938,7 +947,8 @@ with gr.Blocks(title="OmniVoice TTS", theme=gr.themes.Soft()) as app:
                 with gr.Column():
                     profile_name = gr.Textbox(label="Profile Name", value=get_current_config().get("name", ""))
                     profile_desc = gr.Textbox(label="Description", value=get_current_config().get("description", ""), lines=2)
-                    device_map_input = gr.Textbox(label="Device Map", value=get_current_config().get("device_map", "auto"))
+                    model_id_input = gr.Textbox(label="Model ID (HuggingFace)", value=get_current_config().get("model_id", "k2-fsa/OmniVoice"), info="e.g., k2-fsa/OmniVoice")
+                    device_map_input = gr.Textbox(label="Device Map", value=get_current_config().get("device_map", "auto"), info="auto, cpu, or GPU ID")
                     dtype_input = gr.Dropdown(label="Data Type", choices=["float16", "float32"], value=get_current_config().get("dtype", "float16"))
                     prompt_wav_input = gr.Textbox(label="Reference Audio File", value=get_current_config().get("prompt_wav", ""))
                 
@@ -981,13 +991,13 @@ with gr.Blocks(title="OmniVoice TTS", theme=gr.themes.Soft()) as app:
             switch_btn.click(
                 switch_profile,
                 inputs=[profile_dropdown],
-                outputs=[switch_status, profile_name, profile_desc, device_map_input, dtype_input,
+                outputs=[switch_status, profile_name, profile_desc, model_id_input, device_map_input, dtype_input,
                         prompt_wav_input, prompt_text_input, output_dir_input, num_step_input, guidance_scale_input, speed_input]
             )
             
             update_profile_btn.click(
                 update_current_profile,
-                inputs=[profile_name, profile_desc, device_map_input, dtype_input, prompt_wav_input, prompt_text_input, 
+                inputs=[profile_name, profile_desc, model_id_input, device_map_input, dtype_input, prompt_wav_input, prompt_text_input, 
                        output_dir_input, num_step_input, guidance_scale_input, speed_input],
                 outputs=[update_status]
             )
@@ -996,7 +1006,7 @@ with gr.Blocks(title="OmniVoice TTS", theme=gr.themes.Soft()) as app:
             
             create_profile_btn.click(
                 create_new_profile,
-                inputs=[new_profile_id, new_profile_name, new_profile_desc, device_map_input, dtype_input, prompt_wav_input, 
+                inputs=[new_profile_id, new_profile_name, new_profile_desc, model_id_input, device_map_input, dtype_input, prompt_wav_input, 
                        prompt_text_input, output_dir_input, num_step_input, guidance_scale_input, speed_input],
                 outputs=[create_status]
             )

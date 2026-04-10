@@ -31,6 +31,7 @@ class OmniVoiceTTS:
         text: str,
         ref_audio: str,
         output_path: str,
+        model_id: str = "k2-fsa/OmniVoice",
         ref_text: str = None,
         num_step: int = 32,
         guidance_scale: float = 2.0,
@@ -53,6 +54,7 @@ class OmniVoiceTTS:
             text: Text to synthesize
             ref_audio: Path to reference audio file (voice clone)
             output_path: Output file path
+            model_id: Model ID from HuggingFace (default: "k2-fsa/OmniVoice")
             ref_text: Transcription of reference audio. If None, Whisper ASR will auto-transcribe.
             num_step: Number of iterative unmasking steps (32 for quality, 16 for speed)
             guidance_scale: Classifier-free guidance scale
@@ -78,8 +80,9 @@ class OmniVoiceTTS:
             save_path=output_path,
             text=text,
             ref_audio=ref_audio,
-            ref_text=ref_text,
             model=self.model,
+            model_id=model_id,
+            ref_text=ref_text,
             num_step=num_step,
             guidance_scale=guidance_scale,
             speed=speed,
